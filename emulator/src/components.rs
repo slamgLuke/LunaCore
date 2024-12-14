@@ -101,7 +101,7 @@ impl ByteRAM {
         }
     }
 
-    fn print_memory(&self, start: u16, end: u16) {
+    pub fn print_memory(&self, start: u16, end: u16) {
         for i in (start..end).step_by(2) {
             println!("{:04x} : {:02x} {:02x}", i, self.data[i as usize], self.data[(i+1) as usize]);
         }
@@ -142,7 +142,7 @@ impl WordROM {
         }
     }
 
-    fn print_memory(&self, start: u16, end: u16) {
+    pub fn print_memory(&self, start: u16, end: u16) {
         for i in start..end {
             println!("{:04x} : {:04x}", i, self.data[i as usize]);
         }
