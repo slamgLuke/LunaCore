@@ -1,3 +1,5 @@
+use std::fmt;
+
 pub struct RegFile {
     pub t: [u16; 4], // General-purpose: t0 to t3
     pub bp: u16,     // Base pointer
@@ -40,7 +42,6 @@ impl RegFile {
     }
 }
 
-use std::fmt;
 impl fmt::Debug for RegFile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -177,12 +178,29 @@ impl WordROM {
     }
 }
 
-#[derive(Debug)]
 pub struct Flags {
     pub n: bool,
     pub z: bool,
     pub c: bool,
     pub v: bool,
+}
+
+impl Flags {
+    pub fn new() -> Self {
+        Flags {
+            n: false,
+            z: false,
+            c: false,
+            v: false,
+        }
+    }
+}
+
+impl fmt::Debug for Flags {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (n, z, c, v) = (self.n as u8, self.z as u8, self.c as u8, self.v as u8);
+        write!(f, "NZCV: {}{}{}{}", n, z, c, v)
+    }
 }
 
 pub struct CondUnit {
@@ -192,12 +210,7 @@ pub struct CondUnit {
 impl CondUnit {
     pub fn new() -> Self {
         CondUnit {
-            flags: Flags {
-                n: false,
-                z: false,
-                c: false,
-                v: false,
-            },
+            flags: Flags::new(),
         }
     }
 

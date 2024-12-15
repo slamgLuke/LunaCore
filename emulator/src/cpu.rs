@@ -11,8 +11,10 @@ pub struct CPU {
     alu_flags: Flags,
     instr: [u16; 2],
     wide: bool,
+    pc_overwritten: bool,
 
     pub run: bool,
+    pub debug: bool,
 }
 
 impl CPU {
@@ -24,22 +26,21 @@ impl CPU {
             cond_unit: CondUnit::new(),
             pc: 0,
 
-            alu_flags: Flags {
-                n: false,
-                z: false,
-                c: false,
-                v: false,
-            },
+            alu_flags: Flags::new(),
             instr: [0, 0],
             wide: false,
+            pc_overwritten: false,
 
             run: true,
+            debug: true,
         }
     }
 
     pub fn debug(&self) {
         println!("pc: {:04x}", self.pc);
+        println!("Instr: {:04x}", self.instr[0]);
         println!("{:?}", self.regs);
+        println!("{:?}", self.cond_unit.flags);
         println!();
     }
 
@@ -58,21 +59,26 @@ impl CPU {
                     0b01 => self.lod(),
                     0b10 => self.push(),
                     0b11 => self.pop(),
-                    _ => panic!(),
+                    _ => panic!("Special instructions not implemented yet!"),
                 }
             }
             0b10 => self.branch(),
             _ => panic!(),
         }
+
+        if self.debug && self.wide {
+            println!("Wide Immediate used: {:04x}", self.instr[1]);
+        }
     }
 
     pub fn next_cycle(&mut self) {
         // advance pc and reset booleans
-        let op = get_bits(self.instr[0], 15, 14);
-        if op != 0b10 {
+        if !self.pc_overwritten {
             self.pc += self.wide as u16 + 1;
         }
         self.wide = false;
+        self.pc_overwritten = false;
+        self.alu_flags = Flags::new();
     }
 
     fn alu(&mut self, a: u16, b: u16, aluop: u16) -> u16 {
@@ -116,17 +122,20 @@ impl CPU {
     }
 
     fn dp(&mut self) {
+        if self.debug {
+            println!("Executing DP");
+        }
         let imm = get_bits(self.instr[0], 13, 12);
         self.wide = imm == 0b11;
         self.regs.pc = self.pc + 2 + self.wide as u16;
 
         let cmd = get_bits(self.instr[0], 11, 9);
 
-        let rn = get_bits(self.instr[0], 8, 6);
-        let src2 = get_bits(self.instr[0], 5, 3);
-        let rd = get_bits(self.instr[0], 2, 0);
+        let td = get_bits(self.instr[0], 8, 6);
+        let tn = get_bits(self.instr[0], 5, 3);
+        let src2 = get_bits(self.instr[0], 2, 0);
 
-        let src_a = self.regs.read(rn);
+        let src_a = self.regs.read(tn);
         let src_b = match imm {
             0b00 => self.regs.read(src2),
             0b01 => imm_extend(src2, 3, 0),
@@ -139,21 +148,33 @@ impl CPU {
 
         // write flags and results
         self.cond_unit.write_flags(&self.alu_flags);
-        self.regs.write(rd, result);
+        self.regs.write(td, result);
+
+        if td == 0b110 {
+            self.pc = result;
+            self.pc_overwritten = true;
+
+            if self.debug {
+                println!("DP Result stored in PC");
+            }
+        }
     }
 
     fn sav(&mut self) {
+        if self.debug {
+            println!("Executing SAV");
+        }
         let imm = get_bits(self.instr[0], 13, 12);
         self.wide = imm == 0b11;
         self.regs.pc = self.pc + 2 + self.wide as u16;
 
         let b = get_bit(self.instr[0], 11);
 
-        let rn = get_bits(self.instr[0], 8, 6);
-        let src2 = get_bits(self.instr[0], 5, 3);
-        let rd = get_bits(self.instr[0], 2, 0);
+        let td = get_bits(self.instr[0], 8, 6);
+        let tn = get_bits(self.instr[0], 5, 3);
+        let src2 = get_bits(self.instr[0], 2, 0);
 
-        let src_a = self.regs.read(rn);
+        let src_a = self.regs.read(tn);
         let src_b = match imm {
             0b00 => self.regs.read(src2),
             0b01 => imm_extend(src2, 3, 0),
@@ -165,22 +186,25 @@ impl CPU {
         let result = self.alu(src_a, src_b, 0b000);
         let addr = result;
 
-        let write_data = self.regs.read(rd);
+        let write_data = self.regs.read(td);
         self.dmem.write(addr, write_data, b);
     }
 
     fn lod(&mut self) {
+        if self.debug {
+            println!("Executing LOD");
+        }
         let imm = get_bits(self.instr[0], 13, 12);
         self.wide = imm == 0b11;
         self.regs.pc = self.pc + 2 + self.wide as u16;
 
         let b = get_bit(self.instr[0], 11);
 
-        let rn = get_bits(self.instr[0], 8, 6);
-        let src2 = get_bits(self.instr[0], 5, 3);
-        let rd = get_bits(self.instr[0], 2, 0);
+        let td = get_bits(self.instr[0], 8, 6);
+        let tn = get_bits(self.instr[0], 5, 3);
+        let src2 = get_bits(self.instr[0], 2, 0);
 
-        let src_a = self.regs.read(rn);
+        let src_a = self.regs.read(tn);
         let src_b = match imm {
             0b00 => self.regs.read(src2),
             0b01 => imm_extend(src2, 3, 0),
@@ -192,22 +216,25 @@ impl CPU {
         let addr = self.alu(src_a, src_b, 0b000);
 
         let read_data = self.dmem.read(addr, b);
-        self.regs.write(rd, read_data);
+        self.regs.write(td, read_data);
     }
 
     fn push(&mut self) {
+        if self.debug {
+            println!("Executing PUSH");
+        }
         let imm = get_bits(self.instr[0], 13, 12);
         self.wide = imm == 0b11;
         self.regs.pc = self.pc + 2 + self.wide as u16;
 
         let b = get_bit(self.instr[0], 11);
 
-        let rn = get_bits(self.instr[0], 8, 6);
-        assert_eq!(rn, 0b101); // rn = sp
-        let src2 = get_bits(self.instr[0], 5, 3);
-        let rd = get_bits(self.instr[0], 2, 0);
+        let td = get_bits(self.instr[0], 8, 6);
+        let tn = get_bits(self.instr[0], 5, 3);
+        assert_eq!(tn, 0b101); // rn = sp
+        let src2 = get_bits(self.instr[0], 2, 0);
 
-        let sp = self.regs.read(rn);
+        let sp = self.regs.read(tn);
         let src_b: u16 = match b {
             0 => 2,
             1 => 1,
@@ -219,29 +246,32 @@ impl CPU {
         let new_sp = result;
 
         let write_data = match imm {
-            0b00 => self.regs.read(rd),
+            0b00 => self.regs.read(td),
             0b01 => imm_extend(src2, 3, 0),
             0b10 => imm_extend(src2, 3, 1),
             0b11 => self.instr[1],
             _ => panic!(),
         };
         self.dmem.write(addr, write_data, b);
-        self.regs.write(rn, new_sp);
+        self.regs.write(tn, new_sp);
     }
 
     fn pop(&mut self) {
+        if self.debug {
+            println!("Executing POP");
+        }
         let imm = get_bits(self.instr[0], 13, 12);
         self.wide = imm == 0b11;
         self.regs.pc = self.pc + 2 + self.wide as u16;
 
         let b = get_bit(self.instr[0], 11);
 
-        let rn = get_bits(self.instr[0], 8, 6);
-        assert_eq!(rn, 0b101); // rn = sp
-                               // src2 not used in pop
-        let rd = get_bits(self.instr[0], 2, 0);
+        let td = get_bits(self.instr[0], 8, 6);
+        let tn = get_bits(self.instr[0], 5, 3);
+        assert_eq!(tn, 0b101); // rn = sp
+        let _src2 = get_bits(self.instr[0], 2, 0); // src2 not used in pop
 
-        let sp = self.regs.read(rn);
+        let sp = self.regs.read(tn);
         let src_b: u16 = match b {
             0 => 2,
             1 => 1,
@@ -253,11 +283,15 @@ impl CPU {
         let new_sp = result;
 
         let read_data = self.dmem.read(addr, b);
-        self.regs.write(rd, read_data);
-        self.regs.write(rn, new_sp);
+        self.regs.write(td, read_data);
+        self.regs.write(tn, new_sp);
     }
 
     fn branch(&mut self) {
+        if self.debug {
+            println!("Executing Branch");
+        }
+
         let w = get_bit(self.instr[0], 13);
         self.wide = w == 0b1;
         self.regs.pc = self.pc + 2 + self.wide as u16;
@@ -270,8 +304,18 @@ impl CPU {
             false => sign_extend(imm9, 9),
         };
 
+        // do jmp if check = true
         if self.cond_unit.check(cond) {
-            self.pc = self.alu(self.regs.pc, offset, 0b000);
+            let result = self.alu(self.regs.pc, offset, 0b000);
+            self.pc = result;
+            self.pc_overwritten = true;
+        }
+
+        if self.debug {
+            match self.pc_overwritten {
+                true => println!("Branch Taken"),
+                false => println!("Branch Not Taken"),
+            }
         }
     }
 }
