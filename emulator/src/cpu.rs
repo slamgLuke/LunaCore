@@ -39,7 +39,8 @@ impl CPU {
 
     pub fn debug(&self) {
         println!("pc: {:04x}", self.pc);
-        println!("{:#?}", self.regs);
+        println!("{:?}", self.regs);
+        println!();
     }
 
     pub fn fetch(&mut self) {
@@ -81,9 +82,9 @@ impl CPU {
             0b010 => a as u32 & b as u32,        // AND
             0b011 => a as u32 | b as u32,        // OR
             0b100 => a as u32 ^ b as u32,        // XOR
-            0b101 => (a as u32) << (b & 15),     // Logical shift left
-            0b110 => (a as u32) >> (b & 15),     // Logical shift right
-            0b111 => 0,
+            0b101 => b as u32,                   // MOV
+            0b110 => (a as u32) << (b & 15),     // Logical shift left
+            0b111 => (a as u32) >> (b & 15),     // Logical shift right
             _ => panic!(),
         };
 

@@ -1,4 +1,3 @@
-#[derive(Debug)]
 pub struct RegFile {
     pub t: [u16; 4], // General-purpose: t0 to t3
     pub bp: u16,     // Base pointer
@@ -35,9 +34,20 @@ impl RegFile {
             4 => self.bp = data,
             5 => self.sp = data,
             6 => self.pc = data,
-            7 => (),    // input reg is read-only
+            7 => (), // input reg is read-only
             _ => panic!(),
         }
+    }
+}
+
+use std::fmt;
+impl fmt::Debug for RegFile {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "T: [{:04x}, {:04x}, {:04x}, {:04x}]\nBP: {:04x}, SP: {:04x}\nPC: {:04x}, IN: {:04x}",
+            self.t[0], self.t[1], self.t[2], self.t[3], self.bp, self.sp, self.pc, self.input
+        )
     }
 }
 
@@ -60,7 +70,7 @@ impl ByteRAM {
                 if !is_word_aligned(addr) {
                     panic!("Error: Misaligned address trying to read a word in memory");
                 }
-                let msb = self.data[(addr+1) as usize];
+                let msb = self.data[(addr + 1) as usize];
                 let lsb = self.data[addr as usize];
                 into_word(msb, lsb)
             }
@@ -75,7 +85,7 @@ impl ByteRAM {
                 if !is_word_aligned(addr) {
                     panic!("Error: Misaligned address trying to write a word to memory");
                 }
-                self.data[(addr+1) as usize] = get_msb(write_data);
+                self.data[(addr + 1) as usize] = get_msb(write_data);
                 self.data[addr as usize] = get_lsb(write_data);
             }
             _ => panic!(),
@@ -83,12 +93,18 @@ impl ByteRAM {
     }
 
     pub fn load_binary(&mut self, binary_data: &[u8]) {
-        assert!(binary_data.len() <= MEMORY_SIZE, "Input binary is larger than memory!");
+        assert!(
+            binary_data.len() <= MEMORY_SIZE,
+            "Input binary is larger than memory!"
+        );
         self.data.copy_from_slice(&binary_data[0..MEMORY_SIZE]);
     }
 
     pub fn load_binary_str(&mut self, binary_string: &str) {
-        assert!(binary_string.len() % 16 == 0, "Binary string must be 16-bit aligned.");
+        assert!(
+            binary_string.len() % 16 == 0,
+            "Binary string must be 16-bit aligned."
+        );
 
         let mut idx = 0;
         for chunk in binary_string.as_bytes().chunks(16) {
@@ -102,8 +118,14 @@ impl ByteRAM {
     }
 
     pub fn print_memory(&self, start: u16, end: u16) {
+        println!("       MSB LSB");
         for i in (start..end).step_by(2) {
-            println!("{:04x} : {:02x} {:02x}", i, self.data[i as usize], self.data[(i+1) as usize]);
+            println!(
+                "0x{:04x}: {:02x} {:02x}",
+                i,
+                self.data[(i + 1) as usize],
+                self.data[i as usize]
+            );
         }
     }
 }
@@ -124,12 +146,18 @@ impl WordROM {
     }
 
     pub fn load_binary(&mut self, binary_data: &[u16]) {
-        assert!(binary_data.len() <= MEMORY_SIZE, "Input binary is larger than memory!");
+        assert!(
+            binary_data.len() <= MEMORY_SIZE,
+            "Input binary is larger than memory!"
+        );
         self.data.copy_from_slice(&binary_data[0..MEMORY_SIZE]);
     }
 
     pub fn load_binary_str(&mut self, binary_string: &str) {
-        assert!(binary_string.len() % 16 == 0, "Binary string must be 16-bit aligned.");
+        assert!(
+            binary_string.len() % 16 == 0,
+            "Binary string must be 16-bit aligned."
+        );
 
         let mut idx = 0;
         for chunk in binary_string.as_bytes().chunks(16) {
@@ -169,7 +197,7 @@ impl CondUnit {
                 z: false,
                 c: false,
                 v: false,
-            }
+            },
         }
     }
 
@@ -195,7 +223,7 @@ impl CondUnit {
             0b1001 => c,
             0b1010 => n,
             0b1011 => !n,
-            0b1100 => v, 
+            0b1100 => v,
             0b1101 => !v,
             0b1110 => true,
             0b1111 => false,
@@ -203,7 +231,6 @@ impl CondUnit {
         }
     }
 }
-
 
 // bit utils
 fn is_word_aligned(addr: u16) -> bool {
@@ -221,7 +248,6 @@ fn get_msb(data: u16) -> u8 {
 fn into_word(msb: u8, lsb: u8) -> u16 {
     ((msb as u16) << 8) | lsb as u16
 }
-
 
 #[cfg(test)]
 mod test {
