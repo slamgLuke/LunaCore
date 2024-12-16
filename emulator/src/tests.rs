@@ -252,5 +252,82 @@ fn lunacore_test_natural_sum() {
     }
 
     assert_eq!(cpu.regs.t[3], 104*105/2);
+}
+
+
+// testing multiplication by software
+#[test]
+fn lunacore_test_multiplication() {
+    /*
+    main:
+        pushb !213
+        pushb !71
+        push pc
+        jmp mul_8b (+2)
+        add sp, sp, !2
+
+        mov t3, t0
+        jmp 0x1234
+
+    mul_8b:
+        mov t0, !0
+        lodb t1, [sp + 2]
+        lodb t2, [sp + 3]
+        
+    mul_loop:
+        tst t2, !1
+        jz skip_add (+0)
+        add t0, t0, t1
+
+    skip_add:
+        shl t1, t1, !1
+        shr t2, t2, !1
+        jnz mul_loop (-7)
+
+        ret             (pop pc)
+
+    */
+
+    let program = [
+    // main:
+        "0111110000101000", "0000000011010101",
+        "0111110000101000", "0000000001000111",
+        "0100010110101000",
+        "1001110", "000000010",
+        "0001000101101010",
+
+        "0000101011000000",
+        "1011110000000000", "0001001000110100",
+    
+    // mul_8b:
+        "0001101000000000",
+        "0101101001101010",
+        "0101101010101011",
+    // mul_loop:
+        "0001010111010001",
+        "1000000", "000000000",
+        "0000000000000001",
+    // skip_add:
+        "0001110001001001",
+        "0001111010010001",
+        "1000001", "111111001",
+
+        "0100011110101000",
+    ];
+
+    let mut cpu = CPU::new();
+    cpu.debug = true;
+    cpu.imem.load_binary_str(program.join("").as_str());
+
+    for _ in 0..56 {
+        cpu.fetch();
+        cpu.decode_and_execute();
+        cpu.debug();
+        // cpu.dmem.print_memory(0xfffc, 0xffff);
+        cpu.next_cycle();
+    }
+
+    assert_eq!(cpu.regs.t[3], 213*71);
+    assert_eq!(cpu.regs.sp, 0x0000);
 
 }
