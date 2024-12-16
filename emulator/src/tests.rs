@@ -247,6 +247,7 @@ fn lunacore_test_natural_sum() {
 
     for _ in 0..1000 {
         cpu.fetch();
+        cpu.debug_instruction();
         cpu.decode_and_execute();
         cpu.next_cycle();
     }
@@ -321,8 +322,9 @@ fn lunacore_test_multiplication() {
 
     for _ in 0..56 {
         cpu.fetch();
+        cpu.debug_instruction();
         cpu.decode_and_execute();
-        cpu.debug();
+        // cpu.debug_state();
         // cpu.dmem.print_memory(0xfffc, 0xffff);
         cpu.next_cycle();
     }

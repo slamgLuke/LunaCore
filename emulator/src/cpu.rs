@@ -38,12 +38,123 @@ impl CPU {
         }
     }
 
-    pub fn debug(&self) {
-        println!("pc: {:04x}", self.pc);
-        println!("Instr: {:04x}", self.instr[0]);
+    pub fn debug_state(&self) {
+        println!("");
         println!("{:?}", self.regs);
         println!("{:?}", self.cond_unit.flags);
         println!();
+    }
+
+    pub fn debug_instruction(&self) {
+        let op = get_bits(self.instr[0], 15, 14);
+
+        let instr_str = match op {
+            // DP
+            0b00 => {
+                let imm = get_bits(self.instr[0], 13, 12);
+                let cmd = get_bits(self.instr[0], 11, 9);
+                let td = get_bits(self.instr[0], 8, 6);
+                let tn = get_bits(self.instr[0], 5, 3);
+                let src2 = get_bits(self.instr[0], 2, 0);
+
+
+                let src2_string = match imm {
+                    0b00 => reg_to_string(src2) + "      ",
+                    0b01 => format!("!{}      ", src2),
+                    0b10 => format!("!{}      ", imm_extend(src2, 3, 1) as i16),
+                    0b11 => format!("!0x{:04x} ", self.instr[1]),
+                    _ => panic!(),
+                };
+
+                match cmd {
+                    0b000 => format!("ADD {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b001 => format!("SUB {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b010 => format!("AND {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b011 => format!("OR {}, {}, {} ", reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b100 => format!("XOR {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b101 => format!("MOV {}, {}    ", reg_to_string(td), src2_string),
+                    0b110 => format!("SHL {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b111 => format!("SHR {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
+                    _ => panic!(),
+                }
+            }
+            // MEM
+            0b01 => {
+                let imm = get_bits(self.instr[0], 13, 12);
+                let b = get_bit(self.instr[0], 11);
+                let sl = get_bits(self.instr[0], 10, 9);
+                let td = get_bits(self.instr[0], 8, 6);
+                let tn = get_bits(self.instr[0], 5, 3);
+                let src2 = get_bits(self.instr[0], 2, 0);
+
+                let src2_string = match imm {
+                    0b00 => reg_to_string(src2) + "]   ",
+                    0b01 => format!("{}]    ", src2),
+                    0b10 => format!("{}]    ", imm_extend(src2, 3, 1) as i16),
+                    0b11 => format!("0x{:04x}]", self.instr[1]),
+                    _ => panic!(),
+                };
+
+                let push_src = match imm {
+                    0b00 => reg_to_string(td) + "            ",
+                    0b01 => format!("{}             ", src2),
+                    0b10 => format!("{}             ", imm_extend(src2, 3, 1) as i16),
+                    0b11 => format!("0x{:04x}", self.instr[1]),
+                    _ => panic!(),
+                };
+
+                let b_str = match b {
+                    0 => " ",
+                    1 => "B",
+                    _ => panic!(),
+                };
+
+                match sl {
+                    0b00 => format!("SAV{} {}, [{} + {}", b_str, reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b01 => format!("LOD{} {}, [{} + {}", b_str, reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b10 => format!("PUSH{} {}", b_str, push_src),
+                    0b11 => format!("POP{} {}             ", b_str, reg_to_string(td)),
+                    _ => panic!(),
+                }
+            }
+            // BRANCH
+            0b10 => {
+                let w = get_bit(self.instr[0], 13);
+                let cond = get_bits(self.instr[0], 12, 9);
+                let offset = get_bits(self.instr[0], 8, 0);
+
+                let offset_string = match w {
+                    0 => format!("!{}   ", sign_extend(offset, 9) as i16),
+                    1 => format!("!0x{:04x}", self.instr[1]),
+                    _ => panic!(),
+                };
+
+                let cond_str = match cond {
+                    0b0000 => "Z  ",
+                    0b0001 => "NZ ",
+                    0b0010 => "LT ",
+                    0b0011 => "LE ",
+                    0b0100 => "GT ",
+                    0b0101 => "GE ",
+                    0b0110 => "ULT",
+                    0b0111 => "ULE",
+                    0b1000 => "UGT",
+                    0b1001 => "UGE",
+                    0b1010 => "MI ",
+                    0b1011 => "PL ",
+                    0b1100 => "VS ",
+                    0b1101 => "VC ",
+                    0b1110 => "MP ",
+                    0b1111 => "NV ",
+                    _ => panic!(),
+                };
+
+                format!("J{} {}        ", cond_str, offset_string)
+            }
+            _ => panic!(),
+        };
+
+        print!("\nPC={:04x}: {} \t\t\t", self.pc, instr_str);
     }
 
     pub fn fetch(&mut self) {
@@ -56,6 +167,9 @@ impl CPU {
         // wide and next_wide logic
         self.wide = self.is_wide(self.instr[0]);
         self.next_wide = self.is_wide(self.instr[1]) && !self.wide;
+        if self.debug && self.wide {
+            print!("W ");
+        }
 
         // reg file pc
         self.regs.pc = self.pc + 2 + (self.wide || self.next_wide) as u16;
@@ -75,10 +189,6 @@ impl CPU {
             }
             0b10 => self.branch(),
             _ => panic!(),
-        }
-
-        if self.debug && self.wide {
-            println!("Wide Immediate used: {:04x}", self.instr[1]);
         }
     }
 
@@ -149,10 +259,6 @@ impl CPU {
     }
 
     fn dp(&mut self) {
-        if self.debug {
-            println!("Executing DP");
-        }
-
         let imm = get_bits(self.instr[0], 13, 12);
         let cmd = get_bits(self.instr[0], 11, 9);
 
@@ -180,16 +286,12 @@ impl CPU {
             self.pc_overwritten = true;
 
             if self.debug {
-                println!("DP Result stored in PC");
+                print!("DP Result stored in PC ");
             }
         }
     }
 
     fn sav(&mut self) {
-        if self.debug {
-            println!("Executing SAV");
-        }
-
         let imm = get_bits(self.instr[0], 13, 12);
         let b = get_bit(self.instr[0], 11);
 
@@ -214,10 +316,6 @@ impl CPU {
     }
 
     fn lod(&mut self) {
-        if self.debug {
-            println!("Executing LOD");
-        }
-
         let imm = get_bits(self.instr[0], 13, 12);
         let b = get_bit(self.instr[0], 11);
 
@@ -245,16 +343,12 @@ impl CPU {
             self.pc_overwritten = true;
 
             if self.debug {
-                println!("DP Result stored in PC");
+                print!("LOD Result stored in PC ");
             }
         }
     }
 
     fn push(&mut self) {
-        if self.debug {
-            println!("Executing PUSH");
-        }
-
         let imm = get_bits(self.instr[0], 13, 12);
         let b = get_bit(self.instr[0], 11);
 
@@ -286,10 +380,6 @@ impl CPU {
     }
 
     fn pop(&mut self) {
-        if self.debug {
-            println!("Executing POP");
-        }
-
         let b = get_bit(self.instr[0], 11);
 
         let td = get_bits(self.instr[0], 8, 6);
@@ -317,16 +407,12 @@ impl CPU {
             self.pc_overwritten = true;
 
             if self.debug {
-                println!("DP Result stored in PC");
+                print!("POP Result stored in PC ");
             }
         }
     }
 
     fn branch(&mut self) {
-        if self.debug {
-            println!("Executing Branch");
-        }
-
         let cond = get_bits(self.instr[0], 12, 9);
         let imm9 = get_bits(self.instr[0], 8, 0);
 
@@ -344,8 +430,8 @@ impl CPU {
 
         if self.debug {
             match self.pc_overwritten {
-                true => println!("Branch Taken to {:04x}", self.pc),
-                false => println!("Branch Not Taken"),
+                true => print!("Branch Taken to 0x{:04x} ", self.pc),
+                false => print!("Branch Not Taken "),
             }
         }
     }

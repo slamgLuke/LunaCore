@@ -50,7 +50,7 @@ fn main() {
     ];
 
     cpu.imem.load_binary_str(program.join("").as_str());
-    cpu.debug();
+    cpu.debug_state();
     println!();
 
     let n_wide = 4;
@@ -59,8 +59,9 @@ fn main() {
 
     for _ in 0..(program_len + extra_instructions) {
         cpu.fetch();
+        cpu.debug_instruction();
         cpu.decode_and_execute();
-        cpu.debug();
+        // cpu.debug_state();
         cpu.next_cycle();
     }
 

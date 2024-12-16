@@ -52,6 +52,21 @@ impl fmt::Debug for RegFile {
     }
 }
 
+pub fn reg_to_string(reg: u16) -> String {
+    let result = match reg {
+        0 => "T0",
+        1 => "T1",
+        2 => "T2",
+        3 => "T3",
+        4 => "BP",
+        5 => "SP",
+        6 => "PC",
+        7 => "IN",
+        _ => panic!(),
+    };
+    result.to_string()
+}
+
 pub const MEMORY_SIZE: usize = 1 << 16; // 2^16 = 65536 for a 16-bit physical address space
 pub struct ByteRAM {
     pub data: [u8; MEMORY_SIZE],
@@ -119,7 +134,7 @@ impl ByteRAM {
     }
 
     pub fn print_memory(&self, start: u16, end: u16) {
-        println!("       MSB LSB");
+        println!("\n\n\n       MSB LSB");
         for i in (start..end).step_by(2) {
             println!(
                 "0x{:04x}: {:02x} {:02x}",
