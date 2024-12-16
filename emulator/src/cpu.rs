@@ -8,10 +8,11 @@ pub struct CPU {
     pub pc: u16,
 
     // datapath
-    alu_flags: Flags,
-    instr: [u16; 2],
-    wide: bool,
-    pc_overwritten: bool,
+    pub alu_flags: Flags,
+    pub instr: [u16; 2],
+    pub wide: bool,
+    pub next_wide: bool,
+    pub pc_overwritten: bool,
 
     pub run: bool,
     pub debug: bool,
@@ -29,6 +30,7 @@ impl CPU {
             alu_flags: Flags::new(),
             instr: [0, 0],
             wide: false,
+            next_wide: false,
             pc_overwritten: false,
 
             run: true,
@@ -50,6 +52,15 @@ impl CPU {
 
     pub fn decode_and_execute(&mut self) {
         let op = get_bits(self.instr[0], 15, 14);
+
+        // wide and next_wide logic
+        self.wide = self.is_wide(self.instr[0]);
+        self.next_wide = self.is_wide(self.instr[1]) && !self.wide;
+
+        // reg file pc
+        self.regs.pc = self.pc + 2 + (self.wide || self.next_wide) as u16;
+
+        // execute
         match op {
             0b00 => self.dp(),
             0b01 => {
@@ -77,8 +88,24 @@ impl CPU {
             self.pc += self.wide as u16 + 1;
         }
         self.wide = false;
+        self.next_wide = false;
         self.pc_overwritten = false;
         self.alu_flags = Flags::new();
+    }
+
+    fn is_wide(&self, instr: u16) -> bool {
+        let instr_op = get_bits(instr, 15, 14);
+        match instr_op {
+            0b00..=0b01 => {
+                let next_imm = get_bits(instr, 13, 12);
+                next_imm == 0b11
+            }
+            0b10 => {
+                let w = get_bit(instr, 13);
+                w == 1
+            }
+            _ => false,
+        }
     }
 
     fn alu(&mut self, a: u16, b: u16, aluop: u16) -> u16 {
@@ -125,10 +152,8 @@ impl CPU {
         if self.debug {
             println!("Executing DP");
         }
-        let imm = get_bits(self.instr[0], 13, 12);
-        self.wide = imm == 0b11;
-        self.regs.pc = self.pc + 2 + self.wide as u16;
 
+        let imm = get_bits(self.instr[0], 13, 12);
         let cmd = get_bits(self.instr[0], 11, 9);
 
         let td = get_bits(self.instr[0], 8, 6);
@@ -164,10 +189,8 @@ impl CPU {
         if self.debug {
             println!("Executing SAV");
         }
-        let imm = get_bits(self.instr[0], 13, 12);
-        self.wide = imm == 0b11;
-        self.regs.pc = self.pc + 2 + self.wide as u16;
 
+        let imm = get_bits(self.instr[0], 13, 12);
         let b = get_bit(self.instr[0], 11);
 
         let td = get_bits(self.instr[0], 8, 6);
@@ -194,10 +217,8 @@ impl CPU {
         if self.debug {
             println!("Executing LOD");
         }
-        let imm = get_bits(self.instr[0], 13, 12);
-        self.wide = imm == 0b11;
-        self.regs.pc = self.pc + 2 + self.wide as u16;
 
+        let imm = get_bits(self.instr[0], 13, 12);
         let b = get_bit(self.instr[0], 11);
 
         let td = get_bits(self.instr[0], 8, 6);
@@ -213,20 +234,28 @@ impl CPU {
             _ => panic!(),
         };
 
-        let addr = self.alu(src_a, src_b, 0b000);
+        let result = self.alu(src_a, src_b, 0b000);
+        let addr = result;
 
         let read_data = self.dmem.read(addr, b);
         self.regs.write(td, read_data);
+
+        if td == 0b110 {
+            self.pc = read_data;
+            self.pc_overwritten = true;
+
+            if self.debug {
+                println!("DP Result stored in PC");
+            }
+        }
     }
 
     fn push(&mut self) {
         if self.debug {
             println!("Executing PUSH");
         }
-        let imm = get_bits(self.instr[0], 13, 12);
-        self.wide = imm == 0b11;
-        self.regs.pc = self.pc + 2 + self.wide as u16;
 
+        let imm = get_bits(self.instr[0], 13, 12);
         let b = get_bit(self.instr[0], 11);
 
         let td = get_bits(self.instr[0], 8, 6);
@@ -260,9 +289,6 @@ impl CPU {
         if self.debug {
             println!("Executing POP");
         }
-        let imm = get_bits(self.instr[0], 13, 12);
-        self.wide = imm == 0b11;
-        self.regs.pc = self.pc + 2 + self.wide as u16;
 
         let b = get_bit(self.instr[0], 11);
 
@@ -285,16 +311,21 @@ impl CPU {
         let read_data = self.dmem.read(addr, b);
         self.regs.write(td, read_data);
         self.regs.write(tn, new_sp);
+
+        if td == 0b110 {
+            self.pc = read_data;
+            self.pc_overwritten = true;
+
+            if self.debug {
+                println!("DP Result stored in PC");
+            }
+        }
     }
 
     fn branch(&mut self) {
         if self.debug {
             println!("Executing Branch");
         }
-
-        let w = get_bit(self.instr[0], 13);
-        self.wide = w == 0b1;
-        self.regs.pc = self.pc + 2 + self.wide as u16;
 
         let cond = get_bits(self.instr[0], 12, 9);
         let imm9 = get_bits(self.instr[0], 8, 0);
@@ -348,6 +379,8 @@ fn get_bits(data: u16, end: u16, start: u16) -> u16 {
 }
 
 #[cfg(test)]
+#[allow(overflowing_literals)]
+#[allow(arithmetic_overflow)]
 mod tests {
     use super::*;
 
@@ -435,7 +468,7 @@ mod tests {
     #[test]
     fn test_alu_shift_ops() {
         let mut cpu = CPU::new();
-        assert_eq!(cpu.alu(0b0011, 1, 0b101), 0b0110); // LSL
-        assert_eq!(cpu.alu(0b1100, 1, 0b110), 0b0110); // LSR
+        assert_eq!(cpu.alu(0b0011, 1, 0b110), 0b0110); // SHL
+        assert_eq!(cpu.alu(0b1100, 1, 0b111), 0b0110); // SHR
     }
 }

@@ -4,7 +4,10 @@ mod components;
 #[allow(overflowing_literals)]
 #[allow(arithmetic_overflow)]
 mod cpu;
-
+#[cfg(test)]
+#[allow(overflowing_literals)]
+#[allow(arithmetic_overflow)]
+mod tests;
 use crate::cpu::*;
 
 fn main() {
@@ -40,10 +43,10 @@ fn main() {
         "1000001111100010", // jnz -30
         "0001101001000000", // mov t1, !0
         "0001000101101001", // add pc, pc, !1 (skips next)
-        "1010000000000000", // jmpz 0x9999
-        "1001100110011001",
+        "1010000000000000", // jmpz 0xf999
+        "1111100110011001",
         "0010101011000000", // mov t3, !-8
-        "0100100011100000", // savb t3, [bp+0] 
+        "0100100011100000", // savb t3, [bp+0]
     ];
 
     cpu.imem.load_binary_str(program.join("").as_str());
