@@ -344,7 +344,7 @@ impl CPU {
 
         if self.debug {
             match self.pc_overwritten {
-                true => println!("Branch Taken"),
+                true => println!("Branch Taken to {:04x}", self.pc),
                 false => println!("Branch Not Taken"),
             }
         }

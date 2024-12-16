@@ -189,3 +189,68 @@ fn lunacore_test_push_pc_wide() {
 
     assert_eq!(cpu.regs.t, [0xffff, 0, 0xffff, 0xffff]);
 }
+
+
+// testing a function that returns the sum of naturals up to n
+#[test]
+fn lunacore_test_natural_sum() {
+    /*
+    main:
+        push !104
+        push pc
+        jmp natural_sum (+1)
+        mov t3, t0
+        jmp 0x1234
+
+    natural_sum:
+        mov t0, !1
+        mov t1, !1
+        lod t2, [sp + 2]
+    while:
+        cmp t1, t2      (sub in, t1, t2)
+        jge endwhile    (+2)
+        add t1, t1, !1 
+        add t0, t0, t1
+        jmp while       (-6)
+
+    endwhile:
+        ret             (pop pc)
+
+    */
+
+    let program = [
+    // main:
+        "0111010000101000", "0000000001101000",
+        "0100010110101000",
+        "1001110", "000000001",
+        "0000101011000000",
+        "1011110000000000", "0001001000110100",
+
+    // natural_sum:
+        "0000101000000001",
+        "0000101001000001",
+        "0101001010101010",
+
+    // while:
+        "0000001111001010",
+        "1000101", "000000010",
+        "0001000001001001",
+        "0000000000000001",
+        "1001110", "111111010",
+    // endwhile:
+        "0100011110101000",
+    ];
+
+    let mut cpu = CPU::new();
+    cpu.debug = true;
+    cpu.imem.load_binary_str(program.join("").as_str());
+
+    for _ in 0..1000 {
+        cpu.fetch();
+        cpu.decode_and_execute();
+        cpu.next_cycle();
+    }
+
+    assert_eq!(cpu.regs.t[3], 104*105/2);
+
+}
