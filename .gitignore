@@ -1,1 +1,4 @@
 /emulator/target
+/compiler/target
+
+.auto*.xopp
