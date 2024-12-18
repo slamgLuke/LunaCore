@@ -190,6 +190,42 @@ fn lunacore_test_push_pc_wide() {
     assert_eq!(cpu.regs.t, [0xffff, 0, 0xffff, 0xffff]);
 }
 
+// test of problematic case: wide imm jump with small offset
+#[test]
+fn lunacore_test_wide_imm_jmp() {
+    /*
+    0:  jmp label (wide)
+    2:  mov t0, !0x9999
+
+    label:
+    4:  mov t1, !0x8888 
+    */
+
+    let program = [
+    // main:
+        "1011110000000000",
+        "0000000000000001", // (4) - (0+2+w)  =>  label_pc - (pc+2+w)
+        "0011101000000000",
+        "1001100110011001",
+    // label:
+        "0011101001000000",
+        "1000100010001000",
+    ];
+
+    let mut cpu = CPU::new();
+    cpu.imem.load_binary_str(program.join("").as_str());
+    cpu.debug = true;
+
+    for _ in 0..2 {
+        cpu.fetch();
+        cpu.debug_instruction();
+        cpu.decode_and_execute();
+        cpu.next_cycle();
+    }
+
+    assert_eq!(cpu.regs.t, [0, 0x8888, 0, 0]);
+}
+
 
 // testing a function that returns the sum of naturals up to n
 #[test]

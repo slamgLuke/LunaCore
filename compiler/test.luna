@@ -1,0 +1,28 @@
+    main:
+        pushb !25
+        pushb !5
+        push pc
+        jmp mul_8b
+        add sp, sp, !2
+
+        mov t3, t0
+        jmp end 
+
+    mul_8b:
+        mov t0, !0
+        lodb t1, [sp + !2]
+        lodb t2, [sp + !3]
+        
+    mul_loop:
+        tst t2, !1
+        jz skip_add
+        add t0, t0, t1
+
+    skip_add:
+        shl t1, t1, !1
+        shr t2, t2, !1
+        jnz mul_loop
+
+        ret
+
+    end:

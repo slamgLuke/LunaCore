@@ -109,11 +109,8 @@ impl ByteRAM {
     }
 
     pub fn load_binary(&mut self, binary_data: &[u8]) {
-        assert!(
-            binary_data.len() <= MEMORY_SIZE,
-            "Input binary is larger than memory!"
-        );
-        self.data.copy_from_slice(&binary_data[0..MEMORY_SIZE]);
+        let load_size = binary_data.len().min(MEMORY_SIZE); // limit to MEMORY_SIZE
+        self.data[..load_size].copy_from_slice(&binary_data[..load_size]);
     }
 
     pub fn load_binary_str(&mut self, binary_string: &str) {
@@ -162,11 +159,8 @@ impl WordROM {
     }
 
     pub fn load_binary(&mut self, binary_data: &[u16]) {
-        assert!(
-            binary_data.len() <= MEMORY_SIZE,
-            "Input binary is larger than memory!"
-        );
-        self.data.copy_from_slice(&binary_data[0..MEMORY_SIZE]);
+        let load_size = binary_data.len().min(MEMORY_SIZE); // limit to MEMORY_SIZE
+        self.data[..load_size].copy_from_slice(&binary_data[..load_size]);
     }
 
     pub fn load_binary_str(&mut self, binary_string: &str) {
