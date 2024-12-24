@@ -13,8 +13,8 @@ use std::io::{self, Write};
 use std::path::Path;
 
 fn main() -> io::Result<()> {
-    let input_filename = "test.luna";
-    let output_filename = "test.lunaexe";
+    let input_filename = "sort.luna";
+    let output_filename = "sort.lunaexe";
 
     let input = fs::read_to_string(input_filename).unwrap();
     let mut parser = Parser::new();

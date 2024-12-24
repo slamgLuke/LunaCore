@@ -1,0 +1,110 @@
+jmp main
+
+; fn selection_sort(arr: *i16, n: u16)
+; i16 i = 0;
+; while (i < n) {
+;   i16 j = i + 1
+;   i16 min = i
+;   while (j < n) {
+;     if (arr[j] < arr[min]) min = j
+;     j++
+;   }
+;   i16 t = arr[i]
+;   arr[i] = arr[min];
+;   arr[min] = t;
+;   i++
+; }
+
+
+selection_sort:
+    push bp
+    mov bp, sp
+    sub sp, !6
+    
+; |  n  |    bp + 6
+; | arr |    bp + 4
+; | ret |    bp + 2
+; |  bp |    bp
+; |  i  |    bp - 2
+; | j/t |    bp - 4
+; | min | <- bp - 6
+    
+    mov t0, !0
+    sav t0, [bp + !-2]
+    
+while_i:
+    lod t0, [bp + !-2]
+    lod t2, [bp + !6]
+    cmp t0, t2
+    jge endwhile_i
+
+    add t1, t0, !1
+    sav t1, [bp + !-4]
+
+    sav t0, [bp + !-6]
+
+while_j:
+    lod t1, [bp + !-4]
+    lod t2, [bp + !6]
+    cmp t1, t2
+    jeq endwhile_j
+
+    // arr[j]
+    lod t0, [bp + !4]
+    lodb t1, [t0 + t1]
+
+    // arr[min]
+    lod t2, [bp + !-6]
+    lodb t2, [t0 + t2]
+
+    cmp t1, t2
+    lod t1, [bp + !-4]
+    jlt if
+    jmp endif
+    
+    if:
+        sav t1, [bp + !-6]
+    endif:
+
+    
+    inc t1
+    sav t1, [bp + !-4]
+    jmp while_j
+endwhile_j:
+
+    lod t0, [bp + !4]
+    lod t2, [bp + !-2]
+    lodb t1, [t0 + t2]
+    sav t1, [bp + !-4]
+    // t = arr[i]
+
+
+    lod t1, [bp + !-6]
+    lodb t1, [t0 + t1]
+    savb t1, [t0 + t2]
+    // arr[i] = arr[min]
+
+    lod t2, [bp + !-6]
+    lod t1, [bp + !-4]
+    savb t1, [t0 + t2]
+    // arr[min] = t
+
+
+    lod t0, [bp + !-2]
+    inc t0
+    sav t0, [bp + !-2]
+    jmp while_i 
+endwhile_i:
+
+    mov sp, bp
+    pop bp
+    ret
+
+
+
+
+main:
+    push !10
+    push !0
+    push pc
+    jmp selection_sort

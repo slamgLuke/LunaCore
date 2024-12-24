@@ -44,18 +44,34 @@ fn main() {
     let mut cpu = CPU::new();
     cpu.debug = true;
 
-    let input_filename = "test.lunaexe";
+    let input_filename = "sort.lunaexe";
     let binary = load_binary_file(input_filename).expect("Invalid binary file");
     cpu.imem.load_binary(&binary[..]);
 
-    for _ in 0..64 {
+    let data = [
+        "00000101", // 5
+        "00000001", // 1
+        "00000011", // 3
+        "00001000", // 8
+        "00000010", // 2
+        "00000110", // 6
+        "00000100", // 4
+        "00000111", // 7
+        "00001001", // 9
+        "00000000", // 0
+    ];
+    cpu.dmem.load_binary_str(data.join("").as_str());
+    
+    for _ in 0..1000 {
         cpu.fetch();
         cpu.debug_instruction();
+        //cpu.debug_state();
         cpu.decode_and_execute();
 
         cpu.next_cycle();
     }
 
     cpu.debug_state();
-    cpu.dmem.print_memory(0xFFE0, 0xFFFF);
+    // cpu.dmem.print_memory(0xFFE0, 0xFFFF);
+    cpu.dmem.print_memory(0x0000, 0x000F);
 }
