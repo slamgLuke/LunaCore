@@ -28,7 +28,8 @@ fn lunacore_test_basic_dp() {
 
     // mov t0, !2
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     assert_eq!(cpu.regs.t[0], 2); // mov 2
     assert_eq!(cpu.pc, 0);
     assert_eq!(cpu.regs.pc, 2);
@@ -36,7 +37,8 @@ fn lunacore_test_basic_dp() {
 
     // shl t1, t0, !2
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     assert_eq!(cpu.regs.t[1], 8); // 2 << 2
     assert_eq!(cpu.pc, 1);
     assert_eq!(cpu.regs.pc, 3);
@@ -44,7 +46,8 @@ fn lunacore_test_basic_dp() {
 
     // sub t2, t1, t0
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     assert_eq!(cpu.regs.t[2], 6); // 8 - 2
     assert_eq!(cpu.pc, 2);
     assert_eq!(cpu.regs.pc, 4);
@@ -52,7 +55,8 @@ fn lunacore_test_basic_dp() {
 
     // push t0
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     assert_eq!(cpu.regs.sp, 0x0000 - 2);
     assert_eq!(cpu.dmem.read(0x0000 - 2, 0), 2); // push 2
     assert_eq!(cpu.pc, 3);
@@ -61,7 +65,8 @@ fn lunacore_test_basic_dp() {
 
     // push t2
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     assert_eq!(cpu.regs.sp, 0x0000 - 4);
     assert_eq!(cpu.dmem.read(0x0000 - 4, 0), 6); // push 6
     assert_eq!(cpu.pc, 4);
@@ -70,7 +75,8 @@ fn lunacore_test_basic_dp() {
 
     // push !-1
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     assert_eq!(cpu.regs.sp, 0x0000 - 6);
     assert_eq!(cpu.dmem.read(0x0000 - 6, 0), -1i16 as u16); // push -1
     assert_eq!(cpu.pc, 5);
@@ -79,7 +85,8 @@ fn lunacore_test_basic_dp() {
 
     // sub bp, sp, !2
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     assert_eq!(cpu.regs.bp, cpu.regs.sp - 2); // sp - 2
     assert_eq!(cpu.pc, 6);
     assert_eq!(cpu.regs.pc, 8);
@@ -87,7 +94,8 @@ fn lunacore_test_basic_dp() {
 
     // popb t3
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     assert_eq!(cpu.regs.sp, 0x0000 - 5);
     assert_eq!(cpu.regs.t[3], 0xff); // popb t3
     assert_eq!(cpu.pc, 7);
@@ -96,7 +104,8 @@ fn lunacore_test_basic_dp() {
 
     // popb t0
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     assert_eq!(cpu.regs.sp, 0x0000 - 4);
     assert_eq!(cpu.regs.t[0], 0xff); // popb t0
     assert_eq!(cpu.pc, 8);
@@ -105,7 +114,8 @@ fn lunacore_test_basic_dp() {
 
     // xor t3, t3, t3
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     assert_eq!(cpu.regs.t[3], 0); // xor t3, t3
     assert_eq!(cpu.pc, 9);
     assert_eq!(cpu.regs.pc, 12);
@@ -114,7 +124,8 @@ fn lunacore_test_basic_dp() {
     // mov t1, !0xffe0
     // W
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     assert!(cpu.wide);
     assert_eq!(cpu.regs.t[1], 0xffe0); // !0xffe0
     assert_eq!(cpu.pc, 10);
@@ -123,7 +134,8 @@ fn lunacore_test_basic_dp() {
 
     // add t0, t0, !-1
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     assert_eq!(cpu.regs.t[0], 0xfe); // t0 - 1
     assert_eq!(cpu.pc, 12);
     assert_eq!(cpu.regs.pc, 14);
@@ -157,7 +169,8 @@ fn lunacore_test_push_pc_wide() {
 
     // push pc
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     assert_eq!(cpu.pc, 0);
     assert_eq!(cpu.regs.pc, 3);
     assert_eq!(cpu.regs.sp, 0x0000 - 2); // push pc 
@@ -166,26 +179,31 @@ fn lunacore_test_push_pc_wide() {
 
     // jmp !4 (wide)
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     assert!(cpu.wide);
     assert_eq!(cpu.pc, 8);
     cpu.next_cycle();
 
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     cpu.next_cycle();
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     cpu.next_cycle();
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
     cpu.next_cycle();
 
     assert_eq!(cpu.regs.t, [0, 0, 0xffff, 0xffff]);
     assert_eq!(cpu.pc, 3); // should not be in 2, which is a wide immediate
 
     cpu.fetch();
-    cpu.decode_and_execute();
+    cpu.decode();
+	cpu.execute();
 
     assert_eq!(cpu.regs.t, [0xffff, 0, 0xffff, 0xffff]);
 }
@@ -219,7 +237,8 @@ fn lunacore_test_wide_imm_jmp() {
     for _ in 0..2 {
         cpu.fetch();
         cpu.debug_instruction();
-        cpu.decode_and_execute();
+        cpu.decode();
+	cpu.execute();
         cpu.next_cycle();
     }
 
@@ -284,7 +303,8 @@ fn lunacore_test_natural_sum() {
     for _ in 0..1000 {
         cpu.fetch();
         cpu.debug_instruction();
-        cpu.decode_and_execute();
+        cpu.decode();
+	cpu.execute();
         cpu.next_cycle();
     }
 
@@ -359,7 +379,8 @@ fn lunacore_test_multiplication() {
     for _ in 0..56 {
         cpu.fetch();
         cpu.debug_instruction();
-        cpu.decode_and_execute();
+        cpu.decode();
+	    cpu.execute();
         // cpu.debug_state();
         // cpu.dmem.print_memory(0xfffc, 0xffff);
         cpu.next_cycle();

@@ -34,7 +34,7 @@ impl CPU {
             pc_overwritten: false,
 
             run: true,
-            debug: true,
+            debug: false,
         }
     }
 
@@ -59,22 +59,22 @@ impl CPU {
 
 
                 let src2_string = match imm {
-                    0b00 => reg_to_string(src2) + "      ",
-                    0b01 => format!("!{}      ", src2),
-                    0b10 => format!("!{}      ", imm_extend(src2, 3, 1) as i16),
-                    0b11 => format!("!0x{:04x} ", self.instr[1]),
+                    0b00 => reg_to_string(src2),
+                    0b01 => format!("!{}", src2),
+                    0b10 => format!("!{}", imm_extend(src2, 3, 1) as i16),
+                    0b11 => format!("!0x{:04x}", self.instr[1]),
                     _ => panic!(),
                 };
 
                 match cmd {
-                    0b000 => format!("ADD {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
-                    0b001 => format!("SUB {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
-                    0b010 => format!("AND {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
-                    0b011 => format!("OR {}, {}, {} ", reg_to_string(td), reg_to_string(tn), src2_string),
-                    0b100 => format!("XOR {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
-                    0b101 => format!("MOV {}, {}    ", reg_to_string(td), src2_string),
-                    0b110 => format!("SHL {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
-                    0b111 => format!("SHR {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b000 => format!("ADD  {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b001 => format!("SUB  {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b010 => format!("AND  {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b011 => format!("OR   {}, {}, {} ", reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b100 => format!("XOR  {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b101 => format!("MOV  {}, {}", reg_to_string(td), src2_string),
+                    0b110 => format!("SHL  {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
+                    0b111 => format!("SHR  {}, {}, {}", reg_to_string(td), reg_to_string(tn), src2_string),
                     _ => panic!(),
                 }
             }
@@ -88,17 +88,17 @@ impl CPU {
                 let src2 = get_bits(self.instr[0], 2, 0);
 
                 let src2_string = match imm {
-                    0b00 => reg_to_string(src2) + "]   ",
-                    0b01 => format!("{}]    ", src2),
-                    0b10 => format!("{}]    ", imm_extend(src2, 3, 1) as i16),
+                    0b00 => reg_to_string(src2) + "]",
+                    0b01 => format!("{}]", src2),
+                    0b10 => format!("{}]", imm_extend(src2, 3, 1) as i16),
                     0b11 => format!("0x{:04x}]", self.instr[1]),
                     _ => panic!(),
                 };
 
                 let push_src = match imm {
-                    0b00 => reg_to_string(td) + "            ",
-                    0b01 => format!("{}             ", src2),
-                    0b10 => format!("{}             ", imm_extend(src2, 3, 1) as i16),
+                    0b00 => reg_to_string(td) + "",
+                    0b01 => format!("{}", src2),
+                    0b10 => format!("{}", imm_extend(src2, 3, 1) as i16),
                     0b11 => format!("0x{:04x}", self.instr[1]),
                     _ => panic!(),
                 };
@@ -124,8 +124,8 @@ impl CPU {
                 let offset = get_bits(self.instr[0], 8, 0);
 
                 let offset_string = match w {
-                    0 => format!("!{}   ", sign_extend(offset, 9) as i16),
-                    1 => format!("!0x{:04x}", self.instr[1]),
+                    0 => format!("{}        => [0x{:04x}]", sign_extend(offset, 9) as i16, self.regs.pc + sign_extend(offset, 9)),
+                    1 => format!("0x{:04x}    => [0x{:04x}]", self.instr[1], self.regs.pc + self.instr[1]),
                     _ => panic!(),
                 };
 
@@ -149,21 +149,19 @@ impl CPU {
                     _ => panic!(),
                 };
 
-                format!("J{} {}        ", cond_str, offset_string)
+                format!("J{} {}", cond_str, offset_string)
             }
             _ => panic!(),
         };
 
-        print!("\nPC={:04x}: {} \t\t\t", self.pc, instr_str);
+        println!("PC=0x{:04x}: {}", self.pc, instr_str);
     }
 
     pub fn fetch(&mut self) {
         self.instr = self.imem.read(self.pc);
     }
 
-    pub fn decode_and_execute(&mut self) {
-        let op = get_bits(self.instr[0], 15, 14);
-
+    pub fn decode(&mut self) {
         // wide and next_wide logic
         self.wide = self.is_wide(self.instr[0]);
         self.next_wide = self.is_wide(self.instr[1]) && !self.wide;
@@ -173,8 +171,11 @@ impl CPU {
 
         // reg file pc
         self.regs.pc = self.pc + 2 + (self.wide || self.next_wide) as u16;
+    }
 
-        // execute
+    pub fn execute(&mut self) {
+        let op = get_bits(self.instr[0], 15, 14);
+
         match op {
             0b00 => self.dp(),
             0b01 => {
@@ -184,7 +185,7 @@ impl CPU {
                     0b01 => self.lod(),
                     0b10 => self.push(),
                     0b11 => self.pop(),
-                    _ => panic!("Special instructions not implemented yet!"),
+                    _ => panic!("Op=11 instructions not implemented yet!"),
                 }
             }
             0b10 => self.branch(),

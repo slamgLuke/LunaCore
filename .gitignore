@@ -1,4 +1,9 @@
-/emulator/target
-/compiler/target
+*
+!/**/
+!*.*
+!Makefile
 
-.auto*.xopp
+/lunacore_emulator/target
+/lunacore_compiler/target
+
+/schematics/.auto*.xopp

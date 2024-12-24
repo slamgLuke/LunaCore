@@ -6,15 +6,23 @@ mod instructions;
 mod parser;
 
 use compiler::compile;
-use instructions::*;
 use parser::*;
+use std::env;
 use std::fs::{self, File};
 use std::io::{self, Write};
 use std::path::Path;
 
 fn main() -> io::Result<()> {
-    let input_filename = "sort.luna";
-    let output_filename = "sort.lunaexe";
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() < 2 {
+        eprintln!("Missing Filename\nUsage: {} <input_filename>", args[0]);
+        std::process::exit(1);
+    }
+
+    let input_filename = &args[1];
+    let output_filename = input_filename.to_owned() + "exe";
+
 
     let input = fs::read_to_string(input_filename).unwrap();
     let mut parser = Parser::new();
@@ -26,11 +34,11 @@ fn main() -> io::Result<()> {
         Ok(_) => (),
     }
 
-    println!("{} instruction parsed:\n{:?}", parser.program.len(), parser.program);
+    println!("{} instructions parsed:\n{:?}", parser.program.len(), parser.program);
     println!("Labels: {:#?}", parser.label_map);
 
     let binary = compile(&parser.get_program());
-    let mut file = File::create(&Path::new(output_filename))?;
+    let mut file = File::create(&Path::new(&output_filename))?;
     for word in &binary {
         file.write_all(&word.to_le_bytes())?;
     }
@@ -43,6 +51,7 @@ fn main() -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instructions::*;
 
     #[test]
     fn parser_test() {
