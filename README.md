@@ -1,6 +1,6 @@
 # LunaCore Architecture
 
-![LunaCore Schematic](https://github.com/slamgLuke/LunaCore/blob/main/LunaCore_schematic.png)
+![LunaCore Schematic](https://github.com/slamgLuke/LunaCore/blob/main/schematics/LunaCore_schematic.png)
 
 ## What is LunaCore?
 
