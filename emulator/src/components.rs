@@ -83,9 +83,7 @@ impl ByteRAM {
         match byte_mode {
             1 => self.data[addr as usize] as u16,
             0 => {
-                if !is_word_aligned(addr) {
-                    panic!("Error: Misaligned address trying to read a word in memory");
-                }
+                assert!(is_word_aligned(addr), "Error: Misaligned address trying to read a word from memory: {}", addr);
                 let msb = self.data[(addr + 1) as usize];
                 let lsb = self.data[addr as usize];
                 into_word(msb, lsb)
@@ -98,9 +96,7 @@ impl ByteRAM {
         match byte_mode {
             1 => self.data[addr as usize] = write_data as u8,
             0 => {
-                if !is_word_aligned(addr) {
-                    panic!("Error: Misaligned address trying to write a word to memory");
-                }
+                assert!(is_word_aligned(addr), "Error: Misaligned address trying to write a word to memory: {}", addr);
                 self.data[(addr + 1) as usize] = get_msb(write_data);
                 self.data[addr as usize] = get_lsb(write_data);
             }
@@ -115,12 +111,12 @@ impl ByteRAM {
 
     pub fn load_binary_str(&mut self, binary_string: &str) {
         assert!(
-            binary_string.len() % 16 == 0,
-            "Binary string must be 16-bit aligned."
+            binary_string.len() % 8 == 0,
+            "Binary string must be 8-bit aligned."
         );
 
         let mut idx = 0;
-        for chunk in binary_string.as_bytes().chunks(16) {
+        for chunk in binary_string.as_bytes().chunks(8) {
             if idx < MEMORY_SIZE {
                 let bin_str = std::str::from_utf8(chunk).unwrap();
                 let byte = u8::from_str_radix(bin_str, 2).unwrap();
