@@ -116,8 +116,7 @@ fn interactive_mode(cpu: &mut CPU, program_len: usize) -> i32 {
                 cycle_count += 1;
             }
             "state" => cpu.debug_state(),
-
-            "memory" => {
+            "mem" | "memory" => {
                 // Prompt for memory range
                 print!("Enter memory range (start end): ");
                 io::stdout().flush().unwrap();
@@ -173,9 +172,9 @@ fn interactive_mode(cpu: &mut CPU, program_len: usize) -> i32 {
                 println!("  memory          - Print memory contents (requires range)");
                 println!("  break <pc>      - Add a breakpoint at the given PC address");
                 println!("  help            - Show this help message");
-                println!("  quit            - Exit the emulator");
+                println!("  quit (q)        - Exit the emulator");
             }
-            "quit" => {
+            "q" | "quit" => {
                 println!("Exiting emulator.");
                 break;
             }

@@ -1,0 +1,90 @@
+// signed division (todo!)
+
+
+// input
+// t0: Dividend (16-bit)
+// t1: divisor (8-bit)
+
+// output
+// t0: quotient
+// t1: remainder
+
+
+
+
+    _start:
+        mov t0, !-23
+        mov t1, !7
+        push pc
+        jmp sdiv
+        jmp _end
+        
+
+
+
+    sdiv:
+        push t2
+        push t3
+
+        push t1
+        push t0
+
+        mov t3, !8
+        mov t0, !0
+
+        mov t1, t0
+        jnc sdiv_skip_dividend_abs
+        sdiv_skip_dividend_abs:
+
+
+        sdiv_skip_divisor_abs:
+
+        shl t2, !8
+
+        ; t3: iter
+        ; t2: abs(divisor)
+        ; t1: abs(Dividend) / remainder
+        ; t0: quotient
+
+    sdiv_loop:
+        sub t1, t2
+
+        jpl sdiv_sign_positive
+
+        sdiv_sign_negative:
+            shl t0, !1
+            add t1, t2
+            jmp sdiv_sign_end
+
+        sdiv_sign_positive:
+            shl t0, !1
+            or t0, !1
+
+        sdiv_sign_end:
+
+
+        shr t2, !1
+        dec t3
+        jpl sdiv_loop
+        
+
+        // change remainder sign
+        pop t2
+        jnc sdiv_skip_rem_neg
+        not t1
+        inc t1
+        sdiv_skip_rem_neg:
+
+        // change quotient sign
+        pop t3
+        xor t2, t3
+        jnc sdiv_skip_quot_neg
+        not t0
+        inc t0
+        sdiv_skip_quot_neg:
+
+        pop t3
+        pop t2
+        ret
+
+    _end:

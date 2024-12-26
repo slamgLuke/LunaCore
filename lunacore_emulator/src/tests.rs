@@ -304,7 +304,7 @@ fn lunacore_test_natural_sum() {
         cpu.fetch();
         cpu.debug_instruction();
         cpu.decode();
-	cpu.execute();
+	    cpu.execute();
         cpu.next_cycle();
     }
 

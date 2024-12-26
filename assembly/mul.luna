@@ -1,0 +1,41 @@
+// multiplication
+
+// input:
+// t0: a
+// t1: b
+
+// output:
+// t0: a * b
+
+    _start:
+        mov t0, !-25
+        mov t1, !-5
+        push pc
+        jmp mul_8b
+
+        mov t3, t0
+        jmp _end
+
+
+
+
+    mul:
+        mov t2, t1
+        mov t1, t0
+        mov t0, !0
+        
+    mul_loop:
+        tst t2, !1
+        jz skip_add
+        add t0, t0, t1
+
+    mul_skip_add:
+        shl t1, t1, !1
+        shr t2, t2, !1
+        jnz mul_loop
+
+        ret
+
+    _end:
+
+

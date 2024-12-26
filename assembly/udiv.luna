@@ -1,0 +1,65 @@
+// unsigned division
+
+
+// input
+// t0: Dividend (16-bit)
+// t1: divisor (8-bit)
+
+// output
+// t0: quotient
+// t1: remainder
+
+
+
+
+    _start:
+        mov t0, !23
+        mov t1, !7
+        push pc
+        jmp udiv
+        jmp _end
+        
+
+
+    
+    udiv:
+        push t2
+        push t3
+
+        mov t3, !8
+        shl t2, t1, !8
+        mov t1, t0
+        mov t0, !0
+
+        ; t3: iter
+        ; t2: divisor
+        ; t1: Dividend / remainder
+        ; t0: quotient
+
+    udiv_loop:
+        sub t1, t2
+
+        jpl udiv_sign_positive
+
+        udiv_sign_negative:
+            shl t0, !1
+            add t1, t2
+            jmp udiv_sign_end
+
+        udiv_sign_positive:
+            shl t0, !1
+            or t0, !1
+
+        udiv_sign_end:
+
+
+        shr t2, !1
+        dec t3
+        jpl udiv_loop
+        
+
+        pop t3
+        pop t2
+        ret
+
+    _end:
